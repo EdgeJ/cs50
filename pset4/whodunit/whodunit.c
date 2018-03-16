@@ -20,6 +20,7 @@ bool valid_file(FILE *infile)
     BITMAPINFOHEADER bi;
     fread(&bi, sizeof(BITMAPINFOHEADER), 1, infile);
 
+    fseek(infile, 0, SEEK_SET);
     // ensure infile is (likely) a 24-bit uncompressed BMP 4.0
     if (bf.bfType != 0x4d42 || bf.bfOffBits != 54 || bi.biSize != 40 ||
         bi.biBitCount != 24 || bi.biCompression != 0)
@@ -59,13 +60,21 @@ int main(int argc, char *argv[])
         return 3;
     }
 
-    if (valid_file(inptr))
+    if (! valid_file(inptr))
     {
         fclose(outptr);
         fclose(inptr);
         fprintf(stderr, "Unsupported file format.\n");
         return 4;
     }
+
+    // read infile's BITMAPFILEHEADER
+    BITMAPFILEHEADER bf;
+    fread(&bf, sizeof(BITMAPFILEHEADER), 1, inptr);
+
+    // read infile's BITMAPINFOHEADER
+    BITMAPINFOHEADER bi;
+    fread(&bi, sizeof(BITMAPINFOHEADER), 1, inptr);
 
     // write outfile's BITMAPFILEHEADER
     fwrite(&bf, sizeof(BITMAPFILEHEADER), 1, outptr);
@@ -87,6 +96,18 @@ int main(int argc, char *argv[])
 
             // read RGB triple from infile
             fread(&triple, sizeof(RGBTRIPLE), 1, inptr);
+
+            // check if our pixel has full red value, but not
+            // 0 for blue and green
+            if (triple.rgbtRed == 0xff && triple.rgbtBlue != 0x00 && triple.rgbtGreen != 0x00)
+            {
+                // remove red if other colors have values
+                triple.rgbtRed = 0x00;
+            } else {
+                // set blue and green to 0xff so we get a white pixel
+                triple.rgbtBlue = 0xff;
+                triple.rgbtGreen = 0xff;
+            }
 
             // write RGB triple to outfile
             fwrite(&triple, sizeof(RGBTRIPLE), 1, outptr);

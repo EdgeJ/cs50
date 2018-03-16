@@ -103,7 +103,9 @@ int main(int argc, char *argv[])
             {
                 // remove red if other colors have values
                 triple.rgbtRed = 0x00;
-            } else {
+            }
+            else
+            {
                 // set blue and green to 0xff so we get a white pixel
                 triple.rgbtBlue = 0xff;
                 triple.rgbtGreen = 0xff;

@@ -1,4 +1,12 @@
-// Copies a BMP file
+/*
+ *
+ * resize
+ *
+ * Copy a bitmap image and resize by a factor of n
+ *
+ * Usage: resize n [infile] [outfile]
+ *
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,7 +18,7 @@ int main(int argc, char *argv[])
     // ensure proper usage
     if (argc != 4)
     {
-        fprintf(stderr, "Usage: resize <int> infile outfile\n");
+        fprintf(stderr, "Usage: resize n [infile] [outfile]\n");
         return 1;
     }
 
@@ -60,24 +68,24 @@ int main(int argc, char *argv[])
         return 4;
     }
 
-    // reset HEADER information
+    /*
+     * set new HEADER information
+    */
 
     // height and width grow by a multiple of our integer argument
     newbi.biWidth *= percent_change;
     newbi.biHeight *= percent_change;
 
-    // bfSize grows by a multiple of our arg * 2 to account for 2 dimensions
-    // also must take into account removing and then re-adding bfOffBits
-    newbf.bfSize = (bf.bfSize - bf.bfOffBits) * (percent_change * 2) + bf.bfOffBits;
+    // determine padding for scanlines
+    int padding = (4 - (bi.biWidth * sizeof(RGBTRIPLE)) % 4) % 4;
 
-    fprintf(stderr, "Original bfsize: %i\n", bf.bfSize);
-    fprintf(stderr, "New bfsize: %i\n", newbf.bfSize);
-    fprintf(stderr, "Original bisize: %i\n", bi.biSize);
-    fprintf(stderr, "New bisize: %i\n", newbi.biSize);
-    fprintf(stderr, "Original biwidth: %i\n", bi.biWidth);
-    fprintf(stderr, "New biwidth: %i\n", newbi.biWidth);
-    fprintf(stderr, "Original biheight: %i\n", bi.biHeight);
-    fprintf(stderr, "New biheight: %i\n", newbi.biHeight);
+    int newpadding = (4 - (newbi.biWidth * sizeof(RGBTRIPLE)) % 4) % 4;
+
+    // image size is number of bytes per line multiplied by number of scanlines
+    newbi.biSizeImage = (((newbi.biWidth * newbi.biBitCount) / 8) + newpadding) * abs(newbi.biHeight);
+
+    // add image size to header offset size to get total file size
+    newbf.bfSize = newbi.biSizeImage + newbf.bfOffBits;
 
     // write outfile's BITMAPFILEHEADER
     fwrite(&newbf, sizeof(BITMAPFILEHEADER), 1, outptr);
@@ -85,10 +93,9 @@ int main(int argc, char *argv[])
     // write outfile's BITMAPINFOHEADER
     fwrite(&newbi, sizeof(BITMAPINFOHEADER), 1, outptr);
 
-    // determine padding for scanlines
-    int padding = (4 - (bi.biWidth * sizeof(RGBTRIPLE)) % 4) % 4;
-
-    int newpadding = (4 - (newbi.biWidth * sizeof(RGBTRIPLE)) % 4) % 4;
+    /*
+    * Copy and resize infile to outfile
+    */
 
     // iterate over infile's scanlines
     for (int i = 0, biHeight = abs(bi.biHeight); i < biHeight; i++)
